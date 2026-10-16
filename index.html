@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DeepSeek Harness 桌面待办的实现范围、验证结果、取舍与下一小时计划。">
+  <title>桌面待办｜实现说明</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#1c3038;background:#f5f8f7}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;line-height:1.7}a{color:inherit}.wrap{width:min(1120px,calc(100% - 44px));margin:auto}
+    .top{position:sticky;top:0;z-index:10;background:#ffffffee;border-bottom:1px solid #dce8e5;backdrop-filter:blur(12px)}
+    .nav{display:flex;align-items:center;justify-content:space-between;gap:22px;min-height:68px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-size:14px;font-weight:750;white-space:nowrap}
+    .mark{display:grid;place-items:center;width:32px;height:32px;background:#18343d;color:#fff;border-radius:9px}
+    .links{display:flex;flex-wrap:wrap;gap:22px}.links a{font-size:13px;color:#5f757b;text-decoration:none;font-weight:650}.links a:hover{color:#0c806f}
+    .hero{color:#fff;background:radial-gradient(circle at 83% 14%,#2d746b 0,transparent 34%),linear-gradient(125deg,#142e3d,#17454d 70%,#17695f)}
+    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:48px;padding:76px 0 81px}
+    .kicker{color:#a9e3cb;font-size:12px;font-weight:800;letter-spacing:.15em}.kicker:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#9de6bd;margin-right:10px}
+    h1,h2,h3,p{margin-top:0}h1{font-size:clamp(38px,5vw,63px);line-height:1.16;letter-spacing:-.045em;margin:20px 0}
+    .lead{color:#d8e9e7;font-size:17px;max-width:620px}.hero small{display:block;color:#afcfca;margin-top:27px}
+    .actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:29px}.actions a{padding:10px 17px;border-radius:10px;font-size:13px;font-weight:750;text-decoration:none}
+    .primary{background:#afe9ca;color:#173b38}.secondary{border:1px solid #ffffff66;color:#fff}
+    .mock-shell{padding:23px;border:1px solid #ffffff30;border-radius:24px;background:#ffffff12;box-shadow:0 25px 55px #071c2044}
+    .window{overflow:hidden;border:1px solid #d7e2e5;border-radius:15px;background:#fbfcfd;color:#253a43}
+    .bar{display:flex;align-items:center;gap:6px;padding:12px 15px;border-bottom:1px solid #e5ecee;background:#f0f3f4}.dot{width:9px;height:9px;border-radius:50%;background:#f47d76}.dot:nth-child(2){background:#ebc46b}.dot:nth-child(3){background:#65c681}.bar span:last-child{margin:auto;color:#667b83;font-size:11px;padding-right:25px}
+    .win-body{padding:21px}.win-head{display:flex;justify-content:space-between;align-items:start}.win-head strong{font-size:19px}.win-head small{display:block;color:#73858d;font-size:11px}
+    .mock-buttons{display:flex;gap:6px}.mock-buttons i{font-style:normal;font-size:10px;padding:5px 7px;border:1px solid #d9e5e7;border-radius:6px}.mock-buttons i:last-child{background:#dff3e8;color:#15795e;border-color:#95d0b1}
+    .mock-input{display:flex;gap:6px;margin:22px 0 12px}.mock-input span{flex:1;color:#9daeb4;border:1px solid #d3e0e3;border-radius:6px;padding:4px 8px;font-size:11px}.mock-input b{background:#246dda;color:#fff;border-radius:6px;padding:5px 9px;font-size:11px}
+    .mock-task{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #e7edef;padding:15px 1px;font-size:12px}.mock-task em{color:#268366;font-size:10px;font-style:normal;white-space:nowrap}
+    .mock-note{text-align:right;color:#badad2;font-size:10px;padding-top:11px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:-28px;position:relative}.stat{background:#fff;border:1px solid #e1e9e8;border-radius:15px;padding:18px 21px;box-shadow:0 12px 28px #1738440c}.stat strong{display:block;font-size:25px;line-height:1.25}.stat span{color:#688087;font-size:12px}
+    section{padding-top:80px;scroll-margin-top:76px}.section-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:25px}.section-head p{max-width:470px;color:#657c83;font-size:14px;margin:0}
+    .label{display:block;color:#19866f;font-size:11px;font-weight:850;letter-spacing:.14em;margin-bottom:7px}h2{font-size:clamp(25px,3vw,36px);letter-spacing:-.03em;line-height:1.3;margin-bottom:0}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}.card{background:#fff;border:1px solid #e0e9e9;border-radius:16px;padding:25px 27px}.card h3{font-size:17px;margin-bottom:9px}.card p,.card li{color:#5d737b;font-size:13px;margin-bottom:0}
+    .badge{display:inline-block;margin-bottom:14px;padding:3px 8px;border-radius:5px;background:#e6f5eb;color:#198067;font-size:10px;font-weight:850}.badge.wait{background:#fff1d9;color:#986508}.badge.later{background:#e8f0ff;color:#3261a7}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f0f5f4;padding:1px 4px;border-radius:4px;overflow-wrap:anywhere;font-size:.92em}
+    .flow{display:flex;gap:10px;align-items:center;margin-top:15px}.flow div{flex:1;padding:15px;background:#eaf3f1;border:1px solid #d9e7e3;border-radius:11px;text-align:center;font-size:12px;font-weight:750}.flow small{display:block;color:#71858a;font-size:10px;font-weight:400}.flow b{color:#32937c}
+    .proof{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.proof article{background:#eaf2f0;border:1px solid #d9e8e3;border-radius:13px;padding:20px}.proof strong{display:block;font-size:14px;margin-bottom:5px}.proof span{display:block;color:#5d757d;font-size:12px}
+    .callout{margin-top:17px;background:#e9f4f0;border-left:4px solid #61b49b;border-radius:0 10px 10px 0;padding:16px 19px;font-size:13px;color:#3f6460}
+    .timeline{background:#fff;border:1px solid #dce7e7;border-radius:15px;overflow:hidden}.step{display:grid;grid-template-columns:120px 1fr 90px;gap:16px;padding:20px 24px;border-bottom:1px solid #e5eeee}.step:last-child{border:0}.step time{color:#167f6a;font-size:13px;font-weight:800}.step strong{font-size:14px}.step p{color:#647b81;font-size:12px;margin:3px 0 0}.step em{text-align:right;color:#819398;font-size:11px;font-style:normal}
+    .checks{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 24px;list-style:none;padding:0;margin:0}.checks li{position:relative;padding-left:27px;color:#58717a;font-size:13px}.checks li:before{content:"";position:absolute;top:5px;left:0;width:16px;height:16px;border:1.5px solid #94b9ae;border-radius:4px}
+    .fine{margin:23px 0 0!important;color:#829298!important;font-size:11px!important}footer{margin-top:80px;padding:25px 0 35px;border-top:1px solid #dce8e6;color:#71858c;font-size:11px}footer .wrap{display:flex;justify-content:space-between;gap:15px}
+    @media(max-width:850px){.hero-grid{grid-template-columns:1fr;padding-top:58px}.mock-shell{max-width:540px}.stats{grid-template-columns:repeat(2,1fr)}.proof{grid-template-columns:1fr}}
+    @media(max-width:600px){.wrap{width:calc(100% - 30px)}.nav{align-items:start;flex-direction:column;padding:11px 0;gap:9px}.links{gap:13px}.hero-grid{padding-top:45px;gap:28px}h1{font-size:38px}.lead{font-size:15px}.stats,.grid,.checks{grid-template-columns:1fr}.section-head{align-items:start;flex-direction:column;gap:10px}section{padding-top:65px}.flow{flex-direction:column}.flow div{width:100%}.flow b{transform:rotate(90deg)}.step{grid-template-columns:84px 1fr;gap:9px}.step em{grid-column:2;text-align:left}footer .wrap{flex-direction:column}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    @media print{.top,.actions,.mock-shell{display:none}.hero{background:#fff;color:#1c3038}.lead,.hero small{color:#58717a}.stats{margin-top:0}section{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <header class="top"><nav class="wrap nav" aria-label="页面导航">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true">✓</span>桌面待办 / 实现说明</a>
+    <div class="links"><a href="#done">完成情况</a><a href="#scope">范围取舍</a><a href="#hour">下一小时</a><a href="#check">验收步骤</a></div>
+  </nav></header>
+
+  <main id="top">
+    <div class="hero"><div class="wrap hero-grid">
+      <div>
+        <span class="kicker">DEEPSEEK HARNESS · DESKTOP TODO</span>
+        <h1>待办有了自己的窗口，也有了 Agent 能读写的真实数据。</h1>
+        <p class="lead">围绕测试题的“必做要求”，实现独立窗口、置顶、本地持久化与 Agent 查询、完成任务。这里记录完成范围、验证现状，以及下一步先做什么。</p>
+        <div class="actions"><a class="primary" href="#done">查看完成情况 ↓</a><a class="secondary" href="#check">查看验收流程 ↗</a></div>
+        <small>本地实现报告 · 2026 年 10 月 16 日 · 静态说明页</small>
+      </div>
+      <div class="mock-shell" aria-label="待办独立窗口示意图">
+        <div class="window"><div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>待办 · 独立窗口</span></div>
+          <div class="win-body"><div class="win-head"><div><strong>待办</strong><small>2 项未完成 · 共 2 项</small></div><div class="mock-buttons"><i>刷新</i><i>置顶</i></div></div>
+          <div class="mock-input"><span>添加任务</span><b>添加</b></div>
+          <div class="mock-task"><span>核对窗口与 Agent 查询结果</span><em>未完成</em></div>
+          <div class="mock-task"><span>验证关闭重开后的任务状态</span><em>未完成</em></div></div>
+        </div><div class="mock-note">根据本机运行截图绘制 · 已脱敏</div>
+      </div>
+    </div></div>
+
+    <div class="wrap stats" aria-label="项目摘要">
+      <div class="stat"><strong>F17</strong><span>系统级独立窗口</span></div><div class="stat"><strong>F18</strong><span>窗口置顶切换</span></div>
+      <div class="stat"><strong>2</strong><span>Agent 查询 / 完成工具</span></div><div class="stat"><strong>163 / 163</strong><span>相关自动化测试通过</span></div>
+    </div>
+
+    <section id="done" class="wrap">
+      <div class="section-head"><div><span class="label">01 / 已实现</span><h2>围绕必做流程完成的能力</h2></div><p>待办窗口与 Agent 工具连接到同一份本地文件；结果来自实际数据。</p></div>
+      <div class="grid">
+        <article class="card"><span class="badge">窗口</span><h3>独立打开、关闭与置顶</h3><p>应用菜单“打开待办”创建 Electron 独立窗口。窗口可拖动、关闭、重新打开，并能切换置顶；主窗口最小化时，待办窗口仍由桌面进程单独持有。</p></article>
+        <article class="card"><span class="badge">数据</span><h3>持久保存任务</h3><p>窗口可添加、展示、完成任务，并自动刷新列表。数据写入 <code>$DSH_HOME/desktop-tasks.json</code>；每项任务都有稳定 ID，写入使用文件锁和原子替换。</p></article>
+        <article class="card"><span class="badge">Agent</span><h3>工具与窗口共用数据</h3><p><code>desktop_tasks_query</code> 读取任务和状态；<code>desktop_tasks_complete</code> 按 ID 或唯一标题完成任务。新对话的工具上下文读取同一份文件。</p></article>
+        <article class="card"><span class="badge">边界情况</span><h3>同名与重复完成有明确结果</h3><p>允许同名任务，以 ID 区分。只给出同名标题时返回候选项且不改数据，Agent 应先询问用户；重复完成返回已有状态，不改动其他任务。</p></article>
+      </div>
+      <div class="flow" aria-label="数据流：窗口和 Agent 工具共用本地任务文件"><div>待办独立窗口<small>添加 · 展示 · 完成</small></div><b>↔</b><div>本地任务文件<small>稳定 ID · 原子写入</small></div><b>↔</b><div>Agent 工具<small>查询 · 完成</small></div></div>
+    </section>
+
+    <section class="wrap" aria-labelledby="proof-title">
+      <div class="section-head"><div><span class="label">02 / 已验证</span><h2 id="proof-title">当前可确认的证据</h2></div><p>区分自动化验证与真实操作验收，避免把代码通过测试等同于完整场景通过。</p></div>
+      <div class="proof">
+        <article><strong>构建与配置</strong><span>完整项目构建通过；247 个配置文件通过校验。</span></article>
+        <article><strong>自动化测试</strong><span>待办工具及 Desktop 启动相关测试 163 项通过，覆盖同名、重复完成、并发新增与新工具上下文读取。</span></article>
+        <article><strong>实际运行截图</strong><span>已看到“打开待办”菜单入口，以及独立窗口中的两项未完成任务。页面示意图省略了原截图中的本机路径和账号信息。</span></article>
+      </div>
+    </section>
+
+    <section id="scope" class="wrap">
+      <div class="section-head"><div><span class="label">03 / 取舍</span><h2>没做完的部分，如何处理</h2></div><p>本轮聚焦“必做要求”，把还需确认的使用场景和选做功能分开管理。</p></div>
+      <div class="grid">
+        <article class="card"><span class="badge wait">仍需人工验收</span><h3>完整端到端流程</h3><p>还需在本机实测：新对话里的 Agent 实际调用、置顶后切换到其他应用、完全退出相关进程再启动后的状态一致性。代码与自动化测试已覆盖相应的数据和工具行为；这些人工步骤当前不标成“已验收”。</p></article>
+        <article class="card"><span class="badge later">本轮暂缓</span><h3>功能清单中的选做项</h3><p>编辑、删除、搜索筛选、优先级、截止日期、导入导出、“全部 / 今日”、Agent 新建及查询时按状态筛选，留待必做流程验收之后。窗口内快速添加和完成虽为选做，本轮已实现，用于跑通演示路径。</p></article>
+      </div>
+      <div class="callout"><strong>取舍依据：</strong>先确认独立窗口、F17 / F18、真实数据共享和边界情况能按题目要求运行；之后再扩展管理能力，出现问题时更容易定位。</div>
+    </section>
+
+    <section id="hour" class="wrap">
+      <div class="section-head"><div><span class="label">04 / 下一小时</span><h2>再给一小时，先补验收闭环</h2></div><p>优先花时间确认必做链路；发现阻断问题就先修复，不先增加选做功能。</p></div>
+      <div class="timeline">
+        <div class="step"><time>00—15 分</time><div><strong>Agent 查询与完成</strong><p>在新对话查询两项任务，按稳定 ID 完成一项，核对窗口刷新后的状态。</p></div><em>共享数据</em></div>
+        <div class="step"><time>15—30 分</time><div><strong>同名与重复完成</strong><p>验证标题歧义时不误改；指定 ID 后只完成目标；重复调用返回已有状态。</p></div><em>边界情况</em></div>
+        <div class="step"><time>30—45 分</time><div><strong>窗口生命周期</strong><p>置顶并最小化主窗口，切到其他应用；取消置顶；关闭重开窗口，再完全退出并重启 Harness。</p></div><em>F17 / F18</em></div>
+        <div class="step"><time>45—60 分</time><div><strong>修复与留证</strong><p>优先处理流程中发现的阻断问题；保存脱敏截图和工具结果，更新本页验收状态。</p></div><em>可复现交付</em></div>
+      </div>
+    </section>
+
+    <section id="check" class="wrap">
+      <div class="section-head"><div><span class="label">05 / 验收</span><h2>本机复现顺序</h2></div><p>始终使用同一个 <code>DSH_HOME</code>，才能比较关闭前后的同一份数据。</p></div>
+      <div class="card">
+        <ol class="checks">
+          <li>从修改后的源码启动 Desktop，在应用菜单点击“打开待办”。</li>
+          <li>在独立窗口中新建两项任务，确认两项均未完成。</li>
+          <li>新建 Agent 对话，调用 <code>desktop_tasks_query</code> 核对标题与状态。</li>
+          <li>调用 <code>desktop_tasks_complete</code> 完成一项，刷新窗口核对另一项仍未完成。</li>
+          <li>开启置顶，最小化主窗口并切换其他应用；随后取消置顶。</li>
+          <li>关闭并重开待办窗口；完全退出 Harness 后重新启动，再查询任务。</li>
+          <li>用同名标题尝试完成并确认无误改；对已完成任务重复调用并确认无额外修改。</li>
+        </ol>
+        <p class="fine">本页是静态说明文档，发布到 GitHub Pages 后不会连接本机 Harness，也不会展示真实任务数据。待办源码改动仍位于本地 deepseek-harness 工作区，未随此页面发布。</p>
+      </div>
+    </section>
+  </main>
+  <footer><div class="wrap"><span>DeepSeek Harness 桌面待办 · 本地实现说明</span><span>静态 HTML · 可直接用于 GitHub Pages</span></div></footer>
+</body>
+</html>
